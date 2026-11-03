@@ -42,3 +42,7 @@ SCHEMA_TABLES = [
     "dim_date",
     "fact_admission",
 ]
+
+# Front end: the static dashboard reads its data from a generated script.
+DASHBOARD_DIR = ROOT / "dashboard"
+DASHBOARD_DATA_JS = DASHBOARD_DIR / "data.js"
