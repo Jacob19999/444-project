@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Healthcare Admissions Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div class="brand">
+      <p class="kicker">444-project · Healthcare analytics</p>
+      <h1>Healthcare Admissions Dashboard</h1>
+      <p class="sub" id="meta-line">Hospital admissions, billing, and length of stay</p>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button type="button" role="tab" id="tab-dashboard" aria-controls="view-dashboard" aria-selected="true">Dashboard</button>
+      <button type="button" role="tab" id="tab-visualizer" aria-controls="view-visualizer" aria-selected="false">Visualizer</button>
+      <button type="button" role="tab" id="tab-model" aria-controls="view-model" aria-selected="false">Data model</button>
+    </nav>
+  </header>
+
+  <section class="filters" id="filters" aria-label="Filters"></section>
+
+  <div class="load-error" id="load-error" hidden>
+    The data file did not load. Run <code>python3 pipeline/export_dashboard.py</code> to create <code>dashboard/data.js</code>, then reload this page.
+  </div>
+
+  <main>
+    <section id="view-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
+      <div class="kpis" id="kpis"></div>
+      <div class="grid" id="dash-grid"></div>
+    </section>
+
+    <section id="view-visualizer" role="tabpanel" aria-labelledby="tab-visualizer" hidden>
+      <p class="intro">Build your own chart from the 54,966 admissions. Pick what to group by, what to split by, and what to measure. The filters above apply here too. Start from one of the team's questions:</p>
+      <div class="presets" id="presets"></div>
+      <div class="viz-layout">
+        <aside class="viz-controls" id="viz-controls" aria-label="Chart settings"></aside>
+        <div class="viz-main" id="viz-main"></div>
+      </div>
+    </section>
+
+    <section id="view-model" role="tabpanel" aria-labelledby="tab-model" hidden>
+      <p class="model-text">The cleaned CSV is split into a <b>snowflake schema</b>. <code>fact_admission</code> holds one row per admission with its measures. Each dimension table describes one side of it. Two dimensions are normalized one more level: patient links to gender and blood type, and date links to month. That second level is what makes it a snowflake rather than a star.</p>
+      <div class="model-diagram" id="model-diagram"></div>
+      <div class="model-tables" id="model-tables"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Data: Kaggle “Healthcare Dataset” by prasad22. It is synthetic, so patterns describe this dataset and are not clinical findings.</p>
+    <p>Built from the snowflake-schema tables in <code>output/tables/</code>. The 534 duplicate rows are removed. The 106 negative bills are flagged as adjustments and left out of cost figures unless you include them with the filter above.</p>
+  </footer>
+</div>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<script src="data.js"></script>
+<script src="stats.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
