@@ -1,0 +1,4 @@
+admission_type,n,sum_x,sum_x2,avg_los
+Emergency,18102,282104,5757834,15.584
+Elective,18473,286538,5825248,15.511
+Urgent,18391,283292,5744824,15.404

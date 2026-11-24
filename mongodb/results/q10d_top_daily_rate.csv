@@ -1,0 +1,11 @@
+admission_id,condition,admission_type,insurer,los_days,billing_amount,billing_per_day
+7089,Diabetes,Urgent,Aetna,1,52211.85,52211.85
+18713,Hypertension,Elective,UnitedHealthcare,1,51350.51,51350.51
+3714,Hypertension,Emergency,Medicare,1,50833.69,50833.69
+51948,Hypertension,Elective,Medicare,1,50723.77,50723.77
+29376,Hypertension,Elective,Medicare,1,50723.77,50723.77
+50385,Arthritis,Elective,Cigna,1,50653.67,50653.67
+48128,Arthritis,Elective,Cigna,1,50653.67,50653.67
+29657,Hypertension,Emergency,Medicare,1,50650.7,50650.7
+39667,Arthritis,Urgent,Cigna,1,50615.0,50615.0
+10456,Asthma,Urgent,UnitedHealthcare,1,50526.71,50526.71

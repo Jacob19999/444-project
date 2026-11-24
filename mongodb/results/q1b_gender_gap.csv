@@ -1,0 +1,7 @@
+condition,female,male,female_pct,male_pct,gap_pts
+Arthritis,4642,4576,16.9,16.64,0.26
+Diabetes,4609,4607,16.78,16.76,0.02
+Obesity,4573,4573,16.65,16.63,0.02
+Cancer,4566,4574,16.62,16.64,-0.02
+Hypertension,4569,4582,16.63,16.66,-0.03
+Asthma,4511,4584,16.42,16.67,-0.25

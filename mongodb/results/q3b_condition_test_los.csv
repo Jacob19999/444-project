@@ -1,0 +1,7 @@
+condition,abnormal_los,inconclusive_los,normal_los,abnormal_minus_normal
+Asthma,15.72,15.86,15.45,0.27
+Cancer,15.66,15.31,15.54,0.12
+Hypertension,15.46,15.39,15.46,-0.0
+Obesity,15.51,15.29,15.55,-0.04
+Arthritis,15.45,15.47,15.59,-0.14
+Diabetes,15.27,15.4,15.63,-0.36

@@ -1,0 +1,4 @@
+admission_type,admissions,negative_bills,below_2sd,above_2sd,negative_per_1000,one_day_stays,max_bill_per_day
+Elective,18473,36,0,0,1.95,603,51350.51
+Emergency,18102,32,0,0,1.77,568,50833.69
+Urgent,18391,38,0,0,2.07,637,52211.85

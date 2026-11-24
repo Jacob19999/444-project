@@ -1,0 +1,652 @@
+
+--- S1a collections and document counts ---
+            collection  documents
+    dim_admission_type          3
+         dim_age_group          5
+        dim_blood_type          8
+              dim_date       1857
+            dim_doctor      40341
+            dim_gender          2
+          dim_hospital      39635
+dim_insurance_provider          5
+ dim_medical_condition          6
+        dim_medication          5
+             dim_month         62
+           dim_patient      48896
+       dim_test_result          3
+        fact_admission      54966
+
+--- S1b one admission joined to all dimensions ---
+                         value
+field                         
+admission_id                 1
+patient          Bobby Jackson
+gender                    Male
+blood_type                  B-
+age                         30
+age_group                18-34
+condition               Cancer
+admission_type          Urgent
+insurer             Blue Cross
+medication         Paracetamol
+test_result             Normal
+admitted            2024-01-31
+year_month             2024-01
+los_days                     2
+billing_amount        18856.28
+billing_per_day        9428.14
+
+--- S2a duplicate source rows (expect 0) ---
+ duplicate_rows
+              0
+
+--- S2b data quality summary ---
+                           value
+field                           
+admissions              54966.00
+missing_patient             0.00
+missing_bill                0.00
+negative_bills            106.00
+discharge_before_admit      0.00
+min_los                     1.00
+max_los                    30.00
+min_age                    13.00
+max_age                    89.00
+min_bill                -2008.49
+max_bill                52764.28
+
+--- S2c fact rows with no matching patient (expect 0) ---
+ orphans
+       0
+
+--- S2d billing adjustments (negative bills) by insurer ---
+         insurer  adjustments  total_adjusted  largest
+           Aetna           27       -18000.85 -2008.49
+           Cigna           24       -12361.95 -1520.42
+        Medicare           21       -10145.16 -1277.65
+UnitedHealthcare           19        -5160.46 -1428.84
+      Blue Cross           15        -7593.66 -1660.01
+
+--- Q1a condition mix within each gender ---
+gender    condition  admissions  gender_total  rank_in_gender  share_pct
+Female    Arthritis        4642         27470               1      16.90
+Female     Diabetes        4609         27470               2      16.78
+Female      Obesity        4573         27470               3      16.65
+Female Hypertension        4569         27470               4      16.63
+Female       Cancer        4566         27470               5      16.62
+Female       Asthma        4511         27470               6      16.42
+  Male     Diabetes        4607         27496               1      16.76
+  Male       Asthma        4584         27496               2      16.67
+  Male Hypertension        4582         27496               3      16.66
+  Male    Arthritis        4576         27496               4      16.64
+  Male       Cancer        4574         27496               5      16.64
+  Male      Obesity        4573         27496               6      16.63
+
+[test] Q1 gender x condition: chi2 = 1.07, dof = 5, p = 0.9565, Cramer's V = 0.0044 -> not significant at alpha 0.05
+
+--- Q1b female vs male share of each condition (gap in percentage points) ---
+   condition  female  male  female_pct  male_pct  gap_pts
+   Arthritis    4642  4576       16.90     16.64     0.26
+    Diabetes    4609  4607       16.78     16.76     0.02
+     Obesity    4573  4573       16.65     16.63     0.02
+      Cancer    4566  4574       16.62     16.64    -0.02
+Hypertension    4569  4582       16.63     16.66    -0.03
+      Asthma    4511  4584       16.42     16.67    -0.25
+
+--- Q1c abnormal test rate by gender x condition ---
+   condition gender  admissions  abnormal_rate_pct
+   Arthritis Female        4642              34.02
+   Arthritis   Male        4576              34.46
+      Asthma Female        4511              32.85
+      Asthma   Male        4584              32.68
+      Cancer Female        4566              34.30
+      Cancer   Male        4574              33.30
+    Diabetes Female        4609              34.15
+    Diabetes   Male        4607              33.80
+Hypertension Female        4569              32.65
+Hypertension   Male        4582              32.41
+     Obesity Female        4573              33.98
+     Obesity   Male        4573              33.89
+
+--- Q2a insurer discount vs market average bill ---
+ discount_rank          insurer  admissions  avg_bill  market_avg  discount_usd  discount_pct  avg_bill_per_day
+             1 UnitedHealthcare       10995  25458.89    25594.63        135.74         0.530           3347.85
+             2            Cigna       11115  25582.23    25594.63         12.41         0.048           3406.52
+             3            Aetna       10795  25615.26    25594.63        -20.63        -0.081           3463.52
+             4       Blue Cross       10937  25639.27    25594.63        -44.64        -0.174           3350.31
+             5         Medicare       11018  25678.09    25594.63        -83.45        -0.326           3428.24
+
+--- Q2b condition-adjusted discount per insurer ---
+         insurer  mean_discount_pct best_condition  best_discount_pct worst_condition  worst_discount_pct
+UnitedHealthcare              0.528        Obesity               1.88          Asthma               -0.58
+           Cigna              0.060   Hypertension               2.88          Cancer               -1.70
+           Aetna             -0.083        Obesity               0.66    Hypertension               -1.62
+      Blue Cross             -0.154         Asthma               2.03         Obesity               -1.08
+        Medicare             -0.330      Arthritis               0.90    Hypertension               -1.27
+
+--- Q2c mean insurer discount (summary of Q2b) ---
+ insurers  mean_discount_pct  mean_abs_discount_pct  best_vs_worst_spread_pts
+        5              0.004                  0.231                     0.858
+
+--- Q3a length of stay by condition ---
+   condition    n  sum_x  sum_x2  avg_los  min_los  max_los  long_stay_pct
+      Asthma 9095 142585 2925577   15.677        1       30          30.93
+   Arthritis 9218 142918 2898460   15.504        1       30          29.64
+      Cancer 9140 141681 2883335   15.501        1       30          29.50
+     Obesity 9146 141284 2872460   15.448        1       30          29.94
+Hypertension 9151 141257 2862969   15.436        1       30          29.32
+    Diabetes 9216 142209 2885105   15.431        1       30          29.62
+
+[test] Q3 length of stay ~ condition: F(5, 54960) = 1.047, p = 0.3880, eta^2 = 0.000095 -> not significant at alpha 0.05
+
+--- Q3b avg length of stay by condition x test result ---
+   condition  abnormal_los  inconclusive_los  normal_los  abnormal_minus_normal
+      Asthma         15.72             15.86       15.45                   0.27
+      Cancer         15.66             15.31       15.54                   0.12
+Hypertension         15.46             15.39       15.46                  -0.00
+     Obesity         15.51             15.29       15.55                  -0.04
+   Arthritis         15.45             15.47       15.59                  -0.14
+    Diabetes         15.27             15.40       15.63                  -0.36
+
+--- Q3c bill per patient-day and avg bill by condition ---
+   condition  admissions  avg_bill  bill_per_patient_day
+     Obesity        9127  25859.22               1674.88
+    Diabetes        9197  25714.33               1666.57
+      Asthma        9077  25685.38               1638.51
+Hypertension        9131  25559.84               1655.92
+   Arthritis        9207  25542.90               1647.53
+      Cancer        9121  25205.92               1625.13
+
+--- Q4a billing by insurer (ranked cheapest average bill first) ---
+         insurer     n        sum_x       sum_x2  total_billed  share_of_billing_pct  avg_bill  bill_per_patient_day  min_bill  max_bill  rate_rank
+UnitedHealthcare 10995 279920531.62 9.357758e+12   279920532.0                 19.94  25458.89               1648.44      9.24  52373.03          1
+           Cigna 11115 284346461.07 9.520073e+12   284346461.0                 20.25  25582.23               1652.00     38.97  52170.04          2
+           Aetna 10795 276516741.59 9.266704e+12   276516742.0                 19.69  25615.26               1659.19     32.63  52211.85          3
+      Blue Cross 10937 280416694.19 9.360610e+12   280416694.0                 19.97  25639.27               1653.52     42.51  52764.28          4
+        Medicare 11018 282921171.50 9.457035e+12   282921172.0                 20.15  25678.09               1644.06     90.83  52092.67          5
+
+[test] Q4 billing amount ~ insurer: F(4, 54855) = 0.382, p = 0.8214, eta^2 = 0.000028 -> not significant at alpha 0.05
+
+--- Q4b average bill by insurer and year ---
+         insurer  year  admissions  avg_bill  yoy_change_pct
+           Aetna  2020        2226  25554.53             NaN
+           Aetna  2021        2156  25964.86            1.61
+           Aetna  2022        2142  25804.13           -0.62
+           Aetna  2023        2067  25268.23           -2.08
+      Blue Cross  2020        2247  25689.32             NaN
+      Blue Cross  2021        2182  25713.19            0.09
+      Blue Cross  2022        2127  25233.07           -1.87
+      Blue Cross  2023        2148  25818.87            2.32
+           Cigna  2020        2204  25404.53             NaN
+           Cigna  2021        2154  25803.81            1.57
+           Cigna  2022        2208  25540.28           -1.02
+           Cigna  2023        2250  25557.59            0.07
+        Medicare  2020        2278  25100.26             NaN
+        Medicare  2021        2159  25806.35            2.81
+        Medicare  2022        2223  25964.81            0.61
+        Medicare  2023        2238  25775.77           -0.73
+UnitedHealthcare  2020        2202  25513.78             NaN
+UnitedHealthcare  2021        2144  25094.61           -1.64
+UnitedHealthcare  2022        2191  25362.71            1.07
+UnitedHealthcare  2023        2215  25644.16            1.11
+
+--- Q4c cheapest and dearest insurer for each medication ---
+ medication cheapest_insurer  cheapest_avg dearest_insurer  dearest_avg  spread_pct
+Paracetamol            Cigna      25225.44           Aetna     26143.33        3.64
+ Penicillin UnitedHealthcare      25102.13           Aetna     25980.04        3.50
+    Lipitor UnitedHealthcare      24959.24        Medicare     25708.58        3.00
+  Ibuprofen            Aetna      25305.09      Blue Cross     26035.42        2.89
+    Aspirin       Blue Cross      25363.00        Medicare     25989.52        2.47
+
+--- Q5a billing rate by age group x gender ---
+age_group gender  admissions  avg_bill  avg_los  bill_per_patient_day  avg_daily_rate
+    13-17 Female          55  29506.28    15.98               1846.24         4437.71
+    13-17   Male          61  27617.16    14.72               1876.00         5258.19
+    18-34 Female        6768  25659.72    15.35               1671.90         3455.83
+    18-34   Male        6690  25587.44    15.48               1653.43         3536.03
+    35-49 Female        6028  25292.72    15.49               1633.10         3376.78
+    35-49   Male        6103  25902.11    15.33               1689.47         3428.69
+    50-64 Female        6036  25720.03    15.52               1656.97         3322.53
+    50-64   Male        6230  25642.68    15.62               1641.41         3428.29
+      65+ Female        8524  25434.37    15.50               1641.42         3387.77
+      65+   Male        8365  25537.54    15.67               1630.00         3263.05
+
+--- Q5b billing rate by length-of-stay band x gender ---
+  los_band gender  admissions  avg_bill  avg_daily_rate
+01-07 days Female        6464  25639.62         9334.57
+01-07 days   Male        6398  25804.98         9485.53
+08-14 days Female        6383  25554.35         2401.40
+08-14 days   Male        6470  25674.67         2414.30
+15-21 days Female        6491  25450.20         1426.59
+15-21 days   Male        6294  25528.04         1431.41
+22-30 days Female        8073  25486.92          990.19
+22-30 days   Male        8287  25634.33          994.04
+
+--- Q5c Pearson correlations ---
+                             pair     n       r  r_squared      p  significant
+ length of stay vs billing amount 54860 -0.0048     0.0000 0.2608        False
+length of stay vs billing per day 54860 -0.5391     0.2906 0.0000         True
+           age vs billing per day 54860 -0.0105     0.0001 0.0137         True
+            age vs billing amount 54860 -0.0033     0.0000 0.4383        False
+
+--- Q6a length-of-stay distribution ---
+  los_band  admissions  avg_los  share_pct  cumulative_pct
+01-07 days       12886     4.02      23.44           23.44
+08-14 days       12879    11.02      23.43           46.87
+15-21 days       12809    18.07      23.30           70.18
+22-30 days       16392    26.03      29.82          100.00
+
+--- Q6a2 admissions for each length of stay (1-30 days) ---
+ los_days  admissions
+        1        1808
+        2        1830
+        3        1828
+        4        1848
+        5        1819
+        6        1889
+        7        1864
+        8        1807
+        9        1856
+       10        1788
+       11        1872
+       12        1823
+       13        1845
+       14        1888
+       15        1771
+       16        1745
+       17        1793
+       18        1798
+       19        1866
+       20        1893
+       21        1943
+       22        1767
+       23        1845
+       24        1737
+       25        1850
+       26        1800
+       27        1862
+       28        1833
+       29        1844
+       30        1854
+
+--- Q6b overall length of stay ---
+ admissions  avg_los  min_los  max_los  patient_days
+      54966   15.499        1       30        851934
+
+--- Q6c length of stay by admission type ---
+admission_type     n  sum_x  sum_x2  avg_los
+     Emergency 18102 282104 5757834   15.584
+      Elective 18473 286538 5825248   15.511
+        Urgent 18391 283292 5744824   15.404
+
+[test] Q6 length of stay ~ admission type: F(2, 54963) = 2.003, p = 0.1350, eta^2 = 0.000073 -> not significant at alpha 0.05
+
+--- Q6d length of stay by condition x admission type (ranked) ---
+ rank    condition admission_type  admissions  avg_los  vs_overall_days
+    1       Cancer      Emergency        2988    16.01             0.51
+    2       Asthma         Urgent        3048    15.75             0.25
+    3       Asthma       Elective        3069    15.73             0.23
+    4    Arthritis       Elective        3062    15.62             0.12
+    5     Diabetes       Elective        3031    15.62             0.12
+    6     Diabetes      Emergency        2988    15.59             0.09
+    7       Asthma      Emergency        2978    15.55             0.05
+    8    Arthritis      Emergency        3073    15.50             0.00
+    9      Obesity      Emergency        3100    15.50            -0.00
+   10 Hypertension         Urgent        2994    15.50            -0.00
+   11 Hypertension       Elective        3182    15.46            -0.04
+   12      Obesity         Urgent        3031    15.44            -0.05
+   13      Obesity       Elective        3015    15.40            -0.10
+   14    Arthritis         Urgent        3083    15.39            -0.11
+   15 Hypertension      Emergency        2975    15.35            -0.15
+   16       Cancer         Urgent        3038    15.26            -0.24
+   17       Cancer       Elective        3114    15.25            -0.25
+   18     Diabetes         Urgent        3197    15.10            -0.40
+
+--- Q7a condition mix within each age group ---
+age_group    condition  admissions  group_total  rank_in_group  share_pct
+    13-17      Obesity          27          116              1      23.28
+    13-17    Arthritis          21          116              2      18.10
+    13-17       Cancer          21          116              2      18.10
+    13-17       Asthma          20          116              4      17.24
+    13-17     Diabetes          16          116              5      13.79
+    13-17 Hypertension          11          116              6       9.48
+    18-34      Obesity        2266        13485              1      16.80
+    18-34       Cancer        2258        13485              2      16.74
+    18-34       Asthma        2254        13485              3      16.71
+    18-34    Arthritis        2252        13485              4      16.70
+    18-34 Hypertension        2242        13485              5      16.63
+    18-34     Diabetes        2213        13485              6      16.41
+    35-49     Diabetes        2087        12154              1      17.17
+    35-49    Arthritis        2050        12154              2      16.87
+    35-49      Obesity        2014        12154              3      16.57
+    35-49 Hypertension        2005        12154              4      16.50
+    35-49       Cancer        2004        12154              5      16.49
+    35-49       Asthma        1994        12154              6      16.41
+    50-64      Obesity        2113        12288              1      17.20
+    50-64     Diabetes        2085        12288              2      16.97
+    50-64 Hypertension        2045        12288              3      16.64
+    50-64       Cancer        2045        12288              3      16.64
+    50-64    Arthritis        2044        12288              5      16.63
+    50-64       Asthma        1956        12288              6      15.92
+      65+       Asthma        2871        16923              1      16.97
+      65+    Arthritis        2851        16923              2      16.85
+      65+ Hypertension        2848        16923              3      16.83
+      65+     Diabetes        2815        16923              4      16.63
+      65+       Cancer        2812        16923              5      16.62
+      65+      Obesity        2726        16923              6      16.11
+
+[test] Q7 age group x condition: chi2 = 21.82, dof = 20, p = 0.3504, Cramer's V = 0.0100 -> not significant at alpha 0.05
+
+--- Q7b age profile of each condition ---
+   condition    n  sum_x   sum_x2  avg_age  min_age  max_age  seniors_pct  under_35_pct
+Hypertension 9151 473271 28011199    51.72       13       89        31.12         24.62
+      Asthma 9095 469260 27751032    51.60       13       89        31.57         25.00
+    Diabetes 9216 475378 27996828    51.58       14       89        30.54         24.19
+   Arthritis 9218 475100 28038706    51.54       13       89        30.93         24.66
+      Cancer 9140 471095 27814599    51.54       13       89        30.77         24.93
+     Obesity 9146 468579 27498033    51.23       13       89        29.81         25.07
+
+[test] Q7 age ~ condition: F(5, 54960) = 0.621, p = 0.6839, eta^2 = 0.000056 -> not significant at alpha 0.05
+
+--- Q8a length of stay by age group ---
+age_group  min_age  max_age     n  sum_x  sum_x2  avg_los  short_stay_pct  long_stay_pct
+    13-17       13       17   116   1777   36253   15.319           23.28          29.31
+    18-34       18       34 13485 207849 4211501   15.413           23.23          29.42
+    35-49       35       49 12154 187308 3808754   15.411           24.18          29.46
+    50-64       50       64 12288 191345 3901407   15.572           23.36          30.25
+      65+       65      120 16923 263655 5369991   15.580           23.15          30.10
+
+[test] Q8 length of stay ~ age group: F(4, 54961) = 1.238, p = 0.2924, eta^2 = 0.000090 -> not significant at alpha 0.05
+
+--- Q8b average length of stay by single year of age ---
+ age  admissions  avg_los
+  13          14   18.357
+  14          18   13.778
+  15          28   15.357
+  16          24   15.000
+  17          32   15.062
+  18         770   15.523
+  19         791   15.392
+  20         744   15.594
+  21         817   15.690
+  22         810   14.684
+  23         783   15.264
+  24         829   15.614
+  25         826   15.534
+  26         805   15.439
+  27         779   15.680
+  28         754   15.798
+  29         781   15.516
+  30         800   15.289
+  31         784   15.381
+  32         750   15.164
+  33         804   15.208
+  34         858   15.287
+  35         804   15.444
+  36         794   15.338
+  37         880   15.431
+  38         890   15.248
+  39         741   14.906
+  40         746   15.436
+  41         800   15.390
+  42         818   15.687
+  43         836   15.193
+  44         827   15.712
+  45         784   14.989
+  46         822   15.611
+  47         793   15.248
+  48         795   15.923
+  49         824   15.570
+  50         817   15.542
+  51         786   15.634
+  52         809   15.314
+  53         839   15.995
+  54         830   15.661
+  55         811   15.813
+  56         853   15.367
+  57         881   15.677
+  58         839   15.667
+  59         798   15.066
+  60         776   15.674
+  61         775   15.815
+  62         805   15.668
+  63         839   15.373
+  64         830   15.312
+  65         827   15.706
+  66         847   15.726
+  67         775   15.277
+  68         800   15.360
+  69         825   15.290
+  70         822   14.844
+  71         750   15.793
+  72         761   16.011
+  73         835   15.422
+  74         781   16.531
+  75         826   16.030
+  76         826   15.726
+  77         783   16.029
+  78         791   15.262
+  79         824   15.621
+  80         855   15.796
+  81         808   15.098
+  82         791   15.549
+  83         785   15.633
+  84         772   14.786
+  85         734   15.777
+  86          41   16.024
+  87          31   13.452
+  88          25   15.880
+  89           8   14.625
+
+--- Q8c Pearson correlation age vs length of stay ---
+                 pair     n      r  r_squared      p  significant
+age vs length of stay 54966 0.0079     0.0001 0.0644        False
+
+--- Q9a length of stay by blood type (ranked) ---
+ rank blood_type    n  sum_x  sum_x2  avg_los
+    1         B+ 6885 108047 2215481   15.693
+    2        AB+ 6882 107452 2190652   15.613
+    3         O- 6804 105779 2158969   15.547
+    4         B- 6872 106671 2177291   15.523
+    5         A+ 6896 106784 2174378   15.485
+    6        AB- 6874 106219 2150031   15.452
+    7         A- 6898 106468 2162082   15.435
+    8         O+ 6855 104514 2099022   15.246
+
+[test] Q9 length of stay ~ blood type: F(7, 54958) = 1.621, p = 0.1242, eta^2 = 0.000206 -> not significant at alpha 0.05
+
+--- Q9b condition rate within each blood type ---
+blood_type    condition  admissions  blood_total  rate_pct
+        A+    Arthritis        1107         6896     16.05
+        A+       Asthma        1124         6896     16.30
+        A+       Cancer        1171         6896     16.98
+        A+     Diabetes        1201         6896     17.42
+        A+ Hypertension        1123         6896     16.28
+        A+      Obesity        1170         6896     16.97
+        A-    Arthritis        1144         6898     16.58
+        A-       Asthma        1162         6898     16.85
+        A-       Cancer        1124         6898     16.29
+        A-     Diabetes        1154         6898     16.73
+        A- Hypertension        1186         6898     17.19
+        A-      Obesity        1128         6898     16.35
+       AB+    Arthritis        1124         6882     16.33
+       AB+       Asthma        1173         6882     17.04
+       AB+       Cancer        1100         6882     15.98
+       AB+     Diabetes        1165         6882     16.93
+       AB+ Hypertension        1204         6882     17.49
+       AB+      Obesity        1116         6882     16.22
+       AB-    Arthritis        1179         6874     17.15
+       AB-       Asthma        1123         6874     16.34
+       AB-       Cancer        1186         6874     17.25
+       AB-     Diabetes        1132         6874     16.47
+       AB- Hypertension        1108         6874     16.12
+       AB-      Obesity        1146         6874     16.67
+        B+    Arthritis        1191         6885     17.30
+        B+       Asthma        1104         6885     16.03
+        B+       Cancer        1186         6885     17.23
+        B+     Diabetes        1180         6885     17.14
+        B+ Hypertension        1087         6885     15.79
+        B+      Obesity        1137         6885     16.51
+        B-    Arthritis        1152         6872     16.76
+        B-       Asthma        1108         6872     16.12
+        B-       Cancer        1131         6872     16.46
+        B-     Diabetes        1136         6872     16.53
+        B- Hypertension        1163         6872     16.92
+        B-      Obesity        1182         6872     17.20
+        O+    Arthritis        1186         6855     17.30
+        O+       Asthma        1162         6855     16.95
+        O+       Cancer        1098         6855     16.02
+        O+     Diabetes        1142         6855     16.66
+        O+ Hypertension        1145         6855     16.70
+        O+      Obesity        1122         6855     16.37
+        O-    Arthritis        1135         6804     16.68
+        O-       Asthma        1139         6804     16.74
+        O-       Cancer        1144         6804     16.81
+        O-     Diabetes        1106         6804     16.26
+        O- Hypertension        1135         6804     16.68
+        O-      Obesity        1145         6804     16.83
+
+[test] Q9 blood type x condition: chi2 = 34.82, dof = 35, p = 0.4769, Cramer's V = 0.0113 -> not significant at alpha 0.05
+
+--- Q9c most common condition per blood type vs dataset rate ---
+blood_type top_condition  rate_pct  dataset_pct  lift_pts
+       AB+  Hypertension     17.49        16.65      0.85
+        A+      Diabetes     17.42        16.77      0.65
+       AB-        Cancer     17.25        16.63      0.62
+        B-       Obesity     17.20        16.64      0.56
+        A-  Hypertension     17.19        16.65      0.54
+        O+     Arthritis     17.30        16.77      0.53
+        B+     Arthritis     17.30        16.77      0.53
+        O-       Obesity     16.83        16.64      0.19
+
+--- Q10a admission type mix within each condition ---
+   condition admission_type  admissions  cond_total  share_pct
+   Arthritis       Elective        3062        9218      33.22
+   Arthritis      Emergency        3073        9218      33.34
+   Arthritis         Urgent        3083        9218      33.45
+      Asthma       Elective        3069        9095      33.74
+      Asthma      Emergency        2978        9095      32.74
+      Asthma         Urgent        3048        9095      33.51
+      Cancer       Elective        3114        9140      34.07
+      Cancer      Emergency        2988        9140      32.69
+      Cancer         Urgent        3038        9140      33.24
+    Diabetes       Elective        3031        9216      32.89
+    Diabetes      Emergency        2988        9216      32.42
+    Diabetes         Urgent        3197        9216      34.69
+Hypertension       Elective        3182        9151      34.77
+Hypertension      Emergency        2975        9151      32.51
+Hypertension         Urgent        2994        9151      32.72
+     Obesity       Elective        3015        9146      32.97
+     Obesity      Emergency        3100        9146      33.89
+     Obesity         Urgent        3031        9146      33.14
+
+[test] Q10 condition x admission type: chi2 = 17.89, dof = 10, p = 0.0568, Cramer's V = 0.0128 -> not significant at alpha 0.05
+
+--- Q10b largest standardized residuals (|r| > 2 would be a notable cell) ---
+   condition admission_type  std_residual
+    Diabetes         Urgent          2.04
+Hypertension       Elective          1.92
+     Obesity      Emergency          1.60
+Hypertension         Urgent         -1.23
+    Diabetes       Elective         -1.19
+     Obesity       Elective         -1.06
+
+billing mean = 25,594.63, sd = 14,175.87, 2-sd fences = [-2,757.10, 53,946.37]
+
+--- Q10c billing outliers by admission type ---
+admission_type  admissions  negative_bills  below_2sd  above_2sd  negative_per_1000  one_day_stays  max_bill_per_day
+      Elective       18473              36          0          0               1.95            603          51350.51
+     Emergency       18102              32          0          0               1.77            568          50833.69
+        Urgent       18391              38          0          0               2.07            637          52211.85
+
+--- Q10c2 billing amount distribution ($2,500 buckets) ---
+ bucket_start  admissions
+            0        1553
+         2500        2848
+         5000        2810
+         7500        2826
+        10000        2743
+        12500        2790
+        15000        2796
+        17500        2748
+        20000        2856
+        22500        2801
+        25000        2734
+        27500        2895
+        30000        2770
+        32500        2811
+        35000        2801
+        37500        2760
+        40000        2766
+        42500        2875
+        45000        2766
+        47500        2457
+        50000         453
+        52500           1
+
+--- Q10d top 10 admissions by billing per day ---
+ admission_id    condition admission_type          insurer  los_days  billing_amount  billing_per_day
+         7089     Diabetes         Urgent            Aetna         1        52211.85         52211.85
+        18713 Hypertension       Elective UnitedHealthcare         1        51350.51         51350.51
+         3714 Hypertension      Emergency         Medicare         1        50833.69         50833.69
+        51948 Hypertension       Elective         Medicare         1        50723.77         50723.77
+        29376 Hypertension       Elective         Medicare         1        50723.77         50723.77
+        50385    Arthritis       Elective            Cigna         1        50653.67         50653.67
+        48128    Arthritis       Elective            Cigna         1        50653.67         50653.67
+        29657 Hypertension      Emergency         Medicare         1        50650.70         50650.70
+        39667    Arthritis         Urgent            Cigna         1        50615.00         50615.00
+        10456       Asthma         Urgent UnitedHealthcare         1        50526.71         50526.71
+
+--- Q10d2 near-duplicate admissions (identical except age) ---
+ age_gap_years  record_groups  extra_copies
+             1           1158          1158
+             2           1084          1084
+             3           1128          1128
+             4           1063          1063
+             5            533           533
+
+total extra copies: 4,966 of 54,966 admissions
+
+--- Q10e monthly admissions by type: busiest and quietest months ---
+ rank year_month  admissions  vs_avg_pct  emergency_share_pct
+    1    2020-08        1003        9.82                32.90
+    2    2020-07        1000        9.49                35.50
+    3    2020-05         970        6.21                36.49
+   46    2021-09         860       -5.84                34.19
+   47    2021-02         828       -9.34                32.49
+   48    2022-02         772      -15.47                35.88
+
+--- CHECK MongoDB vs pandas on the cleaned CSV ---
+                     check    mongodb     pandas  match
+      admissions Arthritis  9218.0000  9218.0000   True
+         avg LOS Arthritis    15.5040    15.5040   True
+         admissions Asthma  9095.0000  9095.0000   True
+            avg LOS Asthma    15.6770    15.6770   True
+         admissions Cancer  9140.0000  9140.0000   True
+            avg LOS Cancer    15.5010    15.5010   True
+       admissions Diabetes  9216.0000  9216.0000   True
+          avg LOS Diabetes    15.4310    15.4310   True
+   admissions Hypertension  9151.0000  9151.0000   True
+      avg LOS Hypertension    15.4360    15.4360   True
+        admissions Obesity  9146.0000  9146.0000   True
+           avg LOS Obesity    15.4480    15.4480   True
+            avg bill Aetna 25615.2600 25615.2600   True
+       avg bill Blue Cross 25639.2700 25639.2700   True
+            avg bill Cigna 25582.2300 25582.2300   True
+         avg bill Medicare 25678.0900 25678.0900   True
+ avg bill UnitedHealthcare 25458.8900 25458.8900   True
+Female + Cancer admissions  4566.0000  4566.0000   True
+      Pearson r age vs LOS     0.0079     0.0079   True
+
+19 of 19 checks match
+
+--- CHECK sensitivity: p-values without the near-duplicates (4,966 rows dropped) ---
+                              test  p_all_rows  p_without_near_dups  same_verdict
+             Q1 gender x condition      0.9565               0.9365          True
+     Q3 length of stay ~ condition      0.3880               0.4243          True
+       Q4 billing amount ~ insurer      0.8214               0.7951          True
+Q6 length of stay ~ admission type      0.1350               0.0940          True
+          Q7 age group x condition      0.3504               0.7463          True
+     Q8 length of stay ~ age group      0.2924               0.2674          True
+         Q9 blood type x condition      0.4769               0.9199          True
+    Q10 condition x admission type      0.0568               0.1627          True

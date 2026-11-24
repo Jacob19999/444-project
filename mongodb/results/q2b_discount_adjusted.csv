@@ -1,0 +1,6 @@
+insurer,mean_discount_pct,best_condition,best_discount_pct,worst_condition,worst_discount_pct
+UnitedHealthcare,0.528,Obesity,1.88,Asthma,-0.58
+Cigna,0.06,Hypertension,2.88,Cancer,-1.7
+Aetna,-0.083,Obesity,0.66,Hypertension,-1.62
+Blue Cross,-0.154,Asthma,2.03,Obesity,-1.08
+Medicare,-0.33,Arthritis,0.9,Hypertension,-1.27
