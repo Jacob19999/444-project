@@ -1,0 +1,5 @@
+pair,n,r,r_squared,p,significant
+length of stay vs billing amount,54860,-0.0048,0.0,0.2608,False
+length of stay vs billing per day,54860,-0.5391,0.2906,0.0,True
+age vs billing per day,54860,-0.0105,0.0001,0.0137,True
+age vs billing amount,54860,-0.0033,0.0,0.4383,False

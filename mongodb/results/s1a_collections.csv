@@ -1,0 +1,15 @@
+collection,documents
+dim_admission_type,3
+dim_age_group,5
+dim_blood_type,8
+dim_date,1857
+dim_doctor,40341
+dim_gender,2
+dim_hospital,39635
+dim_insurance_provider,5
+dim_medical_condition,6
+dim_medication,5
+dim_month,62
+dim_patient,48896
+dim_test_result,3
+fact_admission,54966

@@ -1,0 +1,9 @@
+test,p_all_rows,p_without_near_dups,same_verdict
+Q1 gender x condition,0.9565,0.9365,True
+Q3 length of stay ~ condition,0.388,0.4243,True
+Q4 billing amount ~ insurer,0.8214,0.7951,True
+Q6 length of stay ~ admission type,0.135,0.094,True
+Q7 age group x condition,0.3504,0.7463,True
+Q8 length of stay ~ age group,0.2924,0.2674,True
+Q9 blood type x condition,0.4769,0.9199,True
+Q10 condition x admission type,0.0568,0.1627,True

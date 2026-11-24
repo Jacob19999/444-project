@@ -1,0 +1,7 @@
+condition,admission_type,std_residual
+Diabetes,Urgent,2.04
+Hypertension,Elective,1.92
+Obesity,Emergency,1.6
+Hypertension,Urgent,-1.23
+Diabetes,Elective,-1.19
+Obesity,Elective,-1.06

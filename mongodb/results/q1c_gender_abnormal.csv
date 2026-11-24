@@ -1,0 +1,13 @@
+condition,gender,admissions,abnormal_rate_pct
+Arthritis,Female,4642,34.02
+Arthritis,Male,4576,34.46
+Asthma,Female,4511,32.85
+Asthma,Male,4584,32.68
+Cancer,Female,4566,34.3
+Cancer,Male,4574,33.3
+Diabetes,Female,4609,34.15
+Diabetes,Male,4607,33.8
+Hypertension,Female,4569,32.65
+Hypertension,Male,4582,32.41
+Obesity,Female,4573,33.98
+Obesity,Male,4573,33.89

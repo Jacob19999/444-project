@@ -1,0 +1,11 @@
+test,method,statistic,df,p,effect,significant
+Q1 gender x condition,chi-square,1.072,5,0.9565,Cramer's V = 0.0044,False
+Q3 length of stay ~ condition,one-way ANOVA,1.047,"5, 54960",0.388,eta^2 = 0.000095,False
+Q4 billing amount ~ insurer,one-way ANOVA,0.382,"4, 54855",0.8214,eta^2 = 0.000028,False
+Q6 length of stay ~ admission type,one-way ANOVA,2.003,"2, 54963",0.135,eta^2 = 0.000073,False
+Q7 age group x condition,chi-square,21.819,20,0.3504,Cramer's V = 0.0100,False
+Q7 age ~ condition,one-way ANOVA,0.621,"5, 54960",0.6839,eta^2 = 0.000056,False
+Q8 length of stay ~ age group,one-way ANOVA,1.238,"4, 54961",0.2924,eta^2 = 0.000090,False
+Q9 length of stay ~ blood type,one-way ANOVA,1.621,"7, 54958",0.1242,eta^2 = 0.000206,False
+Q9 blood type x condition,chi-square,34.818,35,0.4769,Cramer's V = 0.0113,False
+Q10 condition x admission type,chi-square,17.89,10,0.0568,Cramer's V = 0.0128,False

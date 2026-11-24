@@ -1,0 +1,9 @@
+blood_type,top_condition,rate_pct,dataset_pct,lift_pts
+AB+,Hypertension,17.49,16.65,0.85
+A+,Diabetes,17.42,16.77,0.65
+AB-,Cancer,17.25,16.63,0.62
+B-,Obesity,17.2,16.64,0.56
+A-,Hypertension,17.19,16.65,0.54
+B+,Arthritis,17.3,16.77,0.53
+O+,Arthritis,17.3,16.77,0.53
+O-,Obesity,16.83,16.64,0.19

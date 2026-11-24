@@ -1,0 +1,9 @@
+los_band,gender,admissions,avg_bill,avg_daily_rate
+01-07 days,Female,6464,25639.62,9334.57
+01-07 days,Male,6398,25804.98,9485.53
+08-14 days,Female,6383,25554.35,2401.4
+08-14 days,Male,6470,25674.67,2414.3
+15-21 days,Female,6491,25450.2,1426.59
+15-21 days,Male,6294,25528.04,1431.41
+22-30 days,Female,8073,25486.92,990.19
+22-30 days,Male,8287,25634.33,994.04

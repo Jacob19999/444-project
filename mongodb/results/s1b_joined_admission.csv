@@ -1,0 +1,2 @@
+admission_id,patient,gender,blood_type,age,age_group,condition,admission_type,insurer,medication,test_result,admitted,year_month,los_days,billing_amount,billing_per_day
+1,Bobby Jackson,Male,B-,30,18-34,Cancer,Urgent,Blue Cross,Paracetamol,Normal,2024-01-31,2024-01,2,18856.28,9428.14

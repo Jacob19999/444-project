@@ -1,0 +1,6 @@
+discount_rank,insurer,admissions,avg_bill,market_avg,discount_usd,discount_pct,avg_bill_per_day
+1,UnitedHealthcare,10995,25458.89,25594.63,135.74,0.53,3347.85
+2,Cigna,11115,25582.23,25594.63,12.41,0.048,3406.52
+3,Aetna,10795,25615.26,25594.63,-20.63,-0.081,3463.52
+4,Blue Cross,10937,25639.27,25594.63,-44.64,-0.174,3350.31
+5,Medicare,11018,25678.09,25594.63,-83.45,-0.326,3428.24

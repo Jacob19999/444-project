@@ -1,0 +1,6 @@
+medication,cheapest_insurer,cheapest_avg,dearest_insurer,dearest_avg,spread_pct
+Paracetamol,Cigna,25225.44,Aetna,26143.33,3.64
+Penicillin,UnitedHealthcare,25102.13,Aetna,25980.04,3.5
+Lipitor,UnitedHealthcare,24959.24,Medicare,25708.58,3.0
+Ibuprofen,Aetna,25305.09,Blue Cross,26035.42,2.89
+Aspirin,Blue Cross,25363.0,Medicare,25989.52,2.47

@@ -1,0 +1,13 @@
+gender,condition,admissions,gender_total,rank_in_gender,share_pct
+Female,Arthritis,4642,27470,1,16.9
+Female,Diabetes,4609,27470,2,16.78
+Female,Obesity,4573,27470,3,16.65
+Female,Hypertension,4569,27470,4,16.63
+Female,Cancer,4566,27470,5,16.62
+Female,Asthma,4511,27470,6,16.42
+Male,Diabetes,4607,27496,1,16.76
+Male,Asthma,4584,27496,2,16.67
+Male,Hypertension,4582,27496,3,16.66
+Male,Arthritis,4576,27496,4,16.64
+Male,Cancer,4574,27496,5,16.64
+Male,Obesity,4573,27496,6,16.63
