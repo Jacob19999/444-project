@@ -6,15 +6,6 @@ import pandas as pd
 
 import stats
 
-# CIS 444 D3 — Healthcare Admissions Analytical Pipeline (MongoDB / PyMongo)
-# Database: healthcare_snowflake   (load it first: python3 mongodb/import_data.py)
-#
-# Run everything:          python3 mongodb/query.py
-# Run one stage/question:  python3 mongodb/query.py Q3      (S1, S2, Q1 ... Q10, CHECK)
-#
-# Cost figures leave out the 106 negative bills (is_billing_adjustment = true),
-# the same rule as sql/03_analysis_queries.sql. Every result table is also
-# saved to mongodb/results/<name>.csv for the charts and the report.
 
 client = MongoClient("mongodb://127.0.0.1:27017/")
 db = client["healthcare_snowflake"]
@@ -28,10 +19,8 @@ pd.set_option("display.width", 200)
 
 def show(title, cursor, save=None):
     print(f"\n--- {title} ---")
-    rows = list(cursor)
-    df = pd.DataFrame(rows)
+    df = pd.DataFrame(list(cursor))
     if len(df) == 1 and len(df.columns) > 8:
-        # one wide document: print it as field / value pairs so it fits on screen
         print(df.T.rename(columns={0: "value"}).rename_axis("field").to_string())
     else:
         print(df.to_string(index=False) if not df.empty else "(no results)")
@@ -40,17 +29,13 @@ def show(title, cursor, save=None):
     return df
 
 
-# ---------------------------------------------------------------------------
-# Shared join stages. Spread them into a pipeline with *LOOKUP_CONDITION.
-#
+# Star schema lookups: spread into a pipeline with *LOOKUP_CONDITION.
 # fact_admission -> dim_patient -> dim_gender
 # fact_admission -> dim_patient -> dim_blood_type
 # fact_admission -> dim_medical_condition / dim_insurance_provider /
 #                   dim_admission_type / dim_test_result / dim_age_group /
 #                   dim_medication
 # fact_admission -> dim_date (admission_date_id) -> dim_month
-# ---------------------------------------------------------------------------
-
 LOOKUP_PATIENT = [
     {
         "$lookup": {
@@ -63,7 +48,7 @@ LOOKUP_PATIENT = [
     {"$unwind": "$patient"},
 ]
 
-LOOKUP_GENDER = [  # needs LOOKUP_PATIENT first (snowflake: patient -> gender)
+LOOKUP_GENDER = [
     {
         "$lookup": {
             "from": "dim_gender",
@@ -75,7 +60,7 @@ LOOKUP_GENDER = [  # needs LOOKUP_PATIENT first (snowflake: patient -> gender)
     {"$unwind": "$gender"},
 ]
 
-LOOKUP_BLOOD_TYPE = [  # needs LOOKUP_PATIENT first (patient -> blood type)
+LOOKUP_BLOOD_TYPE = [
     {
         "$lookup": {
             "from": "dim_blood_type",
@@ -159,7 +144,7 @@ LOOKUP_MEDICATION = [
     {"$unwind": "$medication"},
 ]
 
-LOOKUP_ADMIT_MONTH = [  # fact -> dim_date -> dim_month (snowflake date path)
+LOOKUP_ADMIT_MONTH = [
     {
         "$lookup": {
             "from": "dim_date",
@@ -180,10 +165,8 @@ LOOKUP_ADMIT_MONTH = [  # fact -> dim_date -> dim_month (snowflake date path)
     {"$unwind": "$admit_month"},
 ]
 
-# Cost questions use real bills only (106 negative bills are refunds/adjustments).
 VALID_BILLS = {"$match": {"is_billing_adjustment": False}}
 
-# Length-of-stay bands (days). $switch = three or more if-then choices.
 LOS_BAND = {
     "$switch": {
         "branches": [
@@ -195,8 +178,6 @@ LOS_BAND = {
     }
 }
 
-# Sums that let Python finish a one-way ANOVA without pulling every row:
-# n, sum of x, sum of x squared for each group.
 def anova_sums(field):
     return {
         "n": {"$sum": 1},
@@ -205,7 +186,6 @@ def anova_sums(field):
     }
 
 
-# Sums that let Python finish a Pearson correlation between two fields.
 def pearson_sums(x, y):
     return {
         "$group": {
@@ -220,9 +200,6 @@ def pearson_sums(x, y):
     }
 
 
-# ===========================================================================
-# STAGE 1. Data extraction: collections and how the tables are combined
-# ===========================================================================
 def stage1():
     show(
         "S1a collections and document counts",
@@ -233,8 +210,6 @@ def stage1():
         save="s1a_collections",
     )
 
-    # One admission with every dimension attached: this is the "wide" record
-    # the analysis works from. 10 joins, two of them snowflake (2-step) paths.
     show(
         "S1b one admission joined to all dimensions",
         fact_admission.aggregate(
@@ -277,12 +252,7 @@ def stage1():
     )
 
 
-# ===========================================================================
-# STAGE 2. Data cleaning checks (the cleaning itself is pipeline/clean.py)
-# ===========================================================================
 def stage2():
-    # Duplicates: every source CSV row should appear at most once.
-    # ($count returns no document when nothing matches, so "or" fills in 0.)
     show(
         "S2a duplicate source rows (expect 0)",
         list(
@@ -297,7 +267,6 @@ def stage2():
         or [{"duplicate_rows": 0}],
     )
 
-    # Missing values and range checks in one pass.
     show(
         "S2b data quality summary",
         fact_admission.aggregate(
@@ -330,7 +299,6 @@ def stage2():
         save="s2b_quality",
     )
 
-    # Orphan keys: a fact row whose patient card is missing would vanish at $unwind.
     show(
         "S2c fact rows with no matching patient (expect 0)",
         list(
@@ -352,7 +320,6 @@ def stage2():
         or [{"orphans": 0}],
     )
 
-    # The 106 negative bills: who and how big (kept and flagged, not deleted).
     show(
         "S2d billing adjustments (negative bills) by insurer",
         fact_admission.aggregate(
@@ -383,14 +350,8 @@ def stage2():
     )
 
 
-# ===========================================================================
 # Q1. Is there a correlation between gender and type of diseases?
-# Joins: fact_admission -> dim_patient -> dim_gender ; -> dim_medical_condition
-#        ; -> dim_test_result
-# ===========================================================================
 def q1():
-    # 1a. Admissions for each gender x condition and that condition's share of
-    #     the gender's admissions ($setWindowFields partitioned by gender).
     q1a = show(
         "Q1a condition mix within each gender",
         fact_admission.aggregate(
@@ -439,7 +400,6 @@ def q1():
     )
     stats.print_chi_square("Q1 gender x condition", q1a, "gender", "condition", "admissions")
 
-    # 1b. Side by side: female share vs male share of each condition, and the gap.
     show(
         "Q1b female vs male share of each condition (gap in percentage points)",
         fact_admission.aggregate(
@@ -480,7 +440,6 @@ def q1():
         save="q1b_gender_gap",
     )
 
-    # 1c. Severity check: share of abnormal test results by gender x condition.
     show(
         "Q1c abnormal test rate by gender x condition",
         fact_admission.aggregate(
@@ -514,15 +473,8 @@ def q1():
     )
 
 
-# ===========================================================================
 # Q2. What is the mean healthcare insurance provider discount?
-# The data has no paid/allowed amount, so "discount" = how far below the
-# market average an insurer is billed:  (market avg - insurer avg) / market avg * 100
-# Joins: fact_admission -> dim_insurance_provider ; -> dim_medical_condition
-# ===========================================================================
 def q2():
-    # 2a. Raw discount: insurer average bill vs the all-insurer average.
-    #     Market average = all billed / all admissions (add first, divide last).
     show(
         "Q2a insurer discount vs market average bill",
         fact_admission.aggregate(
@@ -573,9 +525,6 @@ def q2():
         save="q2a_discount_raw",
     )
 
-    # 2b. Like-for-like discount: compare each insurer with the market average
-    #     for the SAME condition, then average those six discounts per insurer.
-    #     This removes any effect of one insurer covering more costly conditions.
     q2b = show(
         "Q2b condition-adjusted discount per insurer",
         fact_admission.aggregate(
@@ -641,8 +590,6 @@ def q2():
         save="q2b_discount_adjusted",
     )
 
-    # 2c. The single answer: mean discount across the five insurers, plus the
-    #     average size of a discount/premium (absolute value) and the spread.
     show(
         "Q2c mean insurer discount (summary of Q2b)",
         [
@@ -657,11 +604,7 @@ def q2():
     )
 
 
-# ===========================================================================
 # Q3. Is there a correlation between medical condition and treatment length?
-# Treatment length = length_of_stay_days (discharge date - admission date).
-# Joins: fact_admission -> dim_medical_condition ; -> dim_test_result
-# ===========================================================================
 def q3():
     q3a = show(
         "Q3a length of stay by condition",
@@ -697,7 +640,6 @@ def q3():
     )
     stats.print_anova("Q3 length of stay ~ condition", q3a, "condition")
 
-    # 3b. Does a worse test result mean a longer stay within each condition?
     show(
         "Q3b avg length of stay by condition x test result",
         fact_admission.aggregate(
@@ -728,7 +670,6 @@ def q3():
         save="q3b_condition_test_los",
     )
 
-    # 3c. Does a longer stay cost more for each condition? (cost of treatment length)
     show(
         "Q3c bill per patient-day and avg bill by condition",
         fact_admission.aggregate(
@@ -759,12 +700,7 @@ def q3():
     )
 
 
-# ===========================================================================
-# Q4. How does the billing amount compare across insurance companies and
-#     does one provide better rates than the others?
-# Joins: fact_admission -> dim_insurance_provider ; -> dim_medication ;
-#        -> dim_date -> dim_month
-# ===========================================================================
+# Q4. How does the billing amount compare across insurance companies and does one provide better rates than the others?
 def q4():
     q4a = show(
         "Q4a billing by insurer (ranked cheapest average bill first)",
@@ -812,7 +748,6 @@ def q4():
     )
     stats.print_anova("Q4 billing amount ~ insurer", q4a, "insurer")
 
-    # 4b. Time trend: average bill per insurer per full year (2019, 2024 partial).
     show(
         "Q4b average bill by insurer and year",
         fact_admission.aggregate(
@@ -862,7 +797,6 @@ def q4():
         save="q4b_insurer_year",
     )
 
-    # 4c. Cheapest insurer for each medication (best in each group: sort, then $first).
     show(
         "Q4c cheapest and dearest insurer for each medication",
         fact_admission.aggregate(
@@ -909,12 +843,7 @@ def q4():
     )
 
 
-# ===========================================================================
-# Q5. How does the billing rate, based on length of hospital stay, compare
-#     between age and gender?
-# Billing rate = billing_per_day (bill / length of stay).
-# Joins: fact_admission -> dim_age_group ; -> dim_patient -> dim_gender
-# ===========================================================================
+# Q5. How does the billing rate, based on length of hospital stay, compare between age and gender?
 def q5():
     show(
         "Q5a billing rate by age group x gender",
@@ -951,7 +880,6 @@ def q5():
         save="q5a_age_gender_rate",
     )
 
-    # 5b. The rate by length-of-stay band, split by gender.
     show(
         "Q5b billing rate by length-of-stay band x gender",
         fact_admission.aggregate(
@@ -984,7 +912,6 @@ def q5():
         save="q5b_los_band_rate",
     )
 
-    # 5c. Correlations computed from sums in MongoDB, finished in Python.
     pairs = [
         ("length of stay vs billing amount", "$length_of_stay_days", "$billing_amount"),
         ("length of stay vs billing per day", "$length_of_stay_days", "$billing_per_day"),
@@ -998,11 +925,7 @@ def q5():
     show("Q5c Pearson correlations", rows, save="q5c_correlations")
 
 
-# ===========================================================================
-# Q6. How long do patients stay, and does that vary by condition or
-#     admission type?
-# Joins: fact_admission -> dim_medical_condition ; -> dim_admission_type
-# ===========================================================================
+# Q6. How long do patients stay, and does that vary by condition or admission type?
 def q6():
     show(
         "Q6a length-of-stay distribution",
@@ -1095,7 +1018,6 @@ def q6():
     )
     stats.print_anova("Q6 length of stay ~ admission type", q6c, "admission_type")
 
-    # 6d. Condition x admission type: every combination ranked against the overall average.
     show(
         "Q6d length of stay by condition x admission type (ranked)",
         fact_admission.aggregate(
@@ -1138,10 +1060,7 @@ def q6():
     )
 
 
-# ===========================================================================
 # Q7. Is there a correlation between age and type of diseases?
-# Joins: fact_admission -> dim_age_group ; -> dim_medical_condition
-# ===========================================================================
 def q7():
     q7a = show(
         "Q7a condition mix within each age group",
@@ -1181,7 +1100,6 @@ def q7():
     )
     stats.print_chi_square("Q7 age group x condition", q7a, "age_group", "condition", "admissions")
 
-    # 7b. Age profile of each condition (numeric age, not groups).
     q7b = show(
         "Q7b age profile of each condition",
         fact_admission.aggregate(
@@ -1219,10 +1137,7 @@ def q7():
     stats.print_anova("Q7 age ~ condition", q7b, "condition")
 
 
-# ===========================================================================
 # Q8. Does the age group have an effect on the duration of the patient's stay?
-# Joins: fact_admission -> dim_age_group
-# ===========================================================================
 def q8():
     q8a = show(
         "Q8a length of stay by age group",
@@ -1258,7 +1173,6 @@ def q8():
     )
     stats.print_anova("Q8 length of stay ~ age group", q8a, "age_group")
 
-    # 8b. Average stay for every single year of age (trend line).
     show(
         "Q8b average length of stay by single year of age",
         fact_admission.aggregate(
@@ -1281,11 +1195,7 @@ def q8():
     show("Q8c Pearson correlation age vs length of stay", [{"pair": "age vs length of stay", **stats.pearson(sums)}], save="q8c_correlation")
 
 
-# ===========================================================================
-# Q9. Does the blood type of the individual cause a longer stay or have a
-#     higher rate of a certain condition?
-# Joins: fact_admission -> dim_patient -> dim_blood_type ; -> dim_medical_condition
-# ===========================================================================
+# Q9. Does the blood type of the individual cause a longer stay or have a higher rate of a certain condition?
 def q9():
     q9a = show(
         "Q9a length of stay by blood type (ranked)",
@@ -1342,8 +1252,6 @@ def q9():
     )
     stats.print_chi_square("Q9 blood type x condition", q9b, "blood_type", "condition", "admissions")
 
-    # 9c. Most common condition in each blood type and how far above the
-    #     dataset-wide rate it sits (best in each group: sort, then $first).
     show(
         "Q9c most common condition per blood type vs dataset rate",
         fact_admission.aggregate(
@@ -1409,12 +1317,7 @@ def q9():
     )
 
 
-# ===========================================================================
-# Q10. Does the admission type correlate with the type of condition the
-#      patient has, and are there any outliers in the data?
-# Joins: fact_admission -> dim_admission_type ; -> dim_medical_condition ;
-#        -> dim_test_result
-# ===========================================================================
+# Q10. Does the admission type correlate with the type of condition the patient has, and are there any outliers in the data?
 def q10():
     q10a = show(
         "Q10a admission type mix within each condition",
@@ -1452,15 +1355,12 @@ def q10():
         save="q10b_residuals",
     )
 
-    # 10c. Billing outliers. Step 1: mean and standard deviation from sums.
     s = list(fact_admission.aggregate([VALID_BILLS, {"$group": {"_id": None, **anova_sums("$billing_amount")}}]))[0]
     mean = s["sum_x"] / s["n"]
     sd = ((s["sum_x2"] - s["n"] * mean**2) / (s["n"] - 1)) ** 0.5
     low_fence, high_fence = mean - 2 * sd, mean + 2 * sd
     print(f"\nbilling mean = {mean:,.2f}, sd = {sd:,.2f}, 2-sd fences = [{low_fence:,.2f}, {high_fence:,.2f}]")
 
-    # Step 2: count bills outside the fences (plus the negative adjustments)
-    #         for each admission type.
     show(
         "Q10c billing outliers by admission type",
         fact_admission.aggregate(
@@ -1496,8 +1396,6 @@ def q10():
         save="q10c_outliers",
     )
 
-    # 10c2. Billing distribution in $2,500 buckets ($toInt drops the decimals),
-    #       to see whether any bills sit apart from the rest.
     show(
         "Q10c2 billing amount distribution ($2,500 buckets)",
         fact_admission.aggregate(
@@ -1512,7 +1410,6 @@ def q10():
         save="q10c2_bill_histogram",
     )
 
-    # 10d. Row-level list: the 10 highest daily billing rates (one-day stays).
     show(
         "Q10d top 10 admissions by billing per day",
         fact_admission.aggregate(
@@ -1540,10 +1437,6 @@ def q10():
         save="q10d_top_daily_rate",
     )
 
-    # 10d2. Record-level outliers: admissions that repeat another admission in
-    #       every field except age (same patient, doctor, hospital, dates, room,
-    #       bill...). Exact duplicates were removed in cleaning; these survived
-    #       because the age differs by a few years.
     near_dups = show(
         "Q10d2 near-duplicate admissions (identical except age)",
         fact_admission.aggregate(
@@ -1586,7 +1479,6 @@ def q10():
     )
     print(f"\ntotal extra copies: {near_dups['extra_copies'].sum():,} of {fact_admission.count_documents({}):,} admissions")
 
-    # 10e. Monthly admission volume by admission type: any month that stands out?
     show(
         "Q10e monthly admissions by type: busiest and quietest months",
         fact_admission.aggregate(
@@ -1620,90 +1512,9 @@ def q10():
                         "emergency_share_pct": {"$round": [{"$multiply": [{"$divide": ["$emergency", "$admissions"]}, 100]}, 2]},
                     }
                 },
-                # 48 full months (2020-2023): keep the 3 busiest and the 3 quietest
                 {"$match": {"$or": [{"rank": {"$lte": 3}}, {"rank": {"$gte": 46}}]}},
                 {"$sort": {"rank": 1}},
             ]
         ),
         save="q10e_month_outliers",
     )
-
-
-# ===========================================================================
-# CHECK. Validate the MongoDB results against the cleaned CSV with pandas.
-# ===========================================================================
-def check():
-    csv = pd.read_csv(Path(__file__).resolve().parent.parent / "output" / "cleaned_healthcare.csv")
-    valid = csv[~csv["Is Billing Adjustment"]]
-    rows = []
-
-    mongo = {r["condition"]: r for r in pd.read_csv(RESULTS_DIR / "q3a_condition_los.csv").to_dict("records")}
-    for cond, grp in csv.groupby("Medical Condition"):
-        rows.append({"check": f"admissions {cond}", "mongodb": mongo[cond]["n"], "pandas": len(grp)})
-        rows.append({"check": f"avg LOS {cond}", "mongodb": mongo[cond]["avg_los"], "pandas": round(grp["Length of Stay"].mean(), 3)})
-
-    mongo = {r["insurer"]: r for r in pd.read_csv(RESULTS_DIR / "q4a_insurer_billing.csv").to_dict("records")}
-    for ins, grp in valid.groupby("Insurance Provider"):
-        rows.append({"check": f"avg bill {ins}", "mongodb": mongo[ins]["avg_bill"], "pandas": round(grp["Billing Amount"].mean(), 2)})
-
-    q1 = pd.read_csv(RESULTS_DIR / "q1a_gender_condition.csv")
-    pandas_female_cancer = len(csv[(csv["Gender"] == "Female") & (csv["Medical Condition"] == "Cancer")])
-    rows.append({
-        "check": "Female + Cancer admissions",
-        "mongodb": int(q1[(q1.gender == "Female") & (q1.condition == "Cancer")]["admissions"].iloc[0]),
-        "pandas": pandas_female_cancer,
-    })
-    r = pd.read_csv(RESULTS_DIR / "q8c_correlation.csv")["r"].iloc[0]
-    rows.append({"check": "Pearson r age vs LOS", "mongodb": r, "pandas": round(csv["Age"].corr(csv["Length of Stay"]), 4)})
-
-    df = pd.DataFrame(rows)
-    df["match"] = (df["mongodb"] - df["pandas"]).abs() < 0.01
-    show("CHECK MongoDB vs pandas on the cleaned CSV", df.to_dict("records"), save="check_validation")
-    print(f"\n{df['match'].sum()} of {len(df)} checks match")
-
-    # Sensitivity: re-run the main tests without the near-duplicates from Q10d2
-    # (keep the first copy). If the verdicts hold, the duplicates do not drive
-    # the conclusions.
-    same = [c for c in csv.columns if c not in ("Source Row", "Age", "Age Group")]
-    dedup = csv.drop_duplicates(subset=same, keep="first")
-    dedup_valid = dedup[~dedup["Is Billing Adjustment"]]
-
-    def anova_p(frame, group, value):
-        g = frame.groupby(group)[value].agg(n="count", sum_x="sum", sum_x2=lambda v: (v**2).sum()).reset_index()
-        return round(stats.anova(g, group)["p"], 4)
-
-    def chi_p(frame, a, b):
-        g = frame.groupby([a, b]).size().rename("n").reset_index()
-        return round(stats.chi_square(g, a, b, "n")["p"], 4)
-
-    tests = pd.read_csv(RESULTS_DIR / "tests.csv").set_index("test")["p"] if (RESULTS_DIR / "tests.csv").exists() else {}
-    sens = [
-        ("Q1 gender x condition", chi_p(dedup, "Gender", "Medical Condition")),
-        ("Q3 length of stay ~ condition", anova_p(dedup, "Medical Condition", "Length of Stay")),
-        ("Q4 billing amount ~ insurer", anova_p(dedup_valid, "Insurance Provider", "Billing Amount")),
-        ("Q6 length of stay ~ admission type", anova_p(dedup, "Admission Type", "Length of Stay")),
-        ("Q7 age group x condition", chi_p(dedup, "Age Group", "Medical Condition")),
-        ("Q8 length of stay ~ age group", anova_p(dedup, "Age Group", "Length of Stay")),
-        ("Q9 blood type x condition", chi_p(dedup, "Blood Type", "Medical Condition")),
-        ("Q10 condition x admission type", chi_p(dedup, "Medical Condition", "Admission Type")),
-    ]
-    show(
-        f"CHECK sensitivity: p-values without the near-duplicates ({len(csv) - len(dedup):,} rows dropped)",
-        [{"test": t, "p_all_rows": tests.get(t), "p_without_near_dups": p, "same_verdict": (tests.get(t, 1) < 0.05) == (p < 0.05)}
-         for t, p in sens],
-        save="check_sensitivity",
-    )
-
-
-STEPS = {
-    "S1": stage1, "S2": stage2,
-    "Q1": q1, "Q2": q2, "Q3": q3, "Q4": q4, "Q5": q5,
-    "Q6": q6, "Q7": q7, "Q8": q8, "Q9": q9, "Q10": q10,
-    "CHECK": check,
-}
-
-if __name__ == "__main__":
-    for step in sys.argv[1:] or STEPS:
-        STEPS[step.upper()]()
-    stats.save_tests(RESULTS_DIR / "tests.csv")
-    client.close()
